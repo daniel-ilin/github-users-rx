@@ -31,24 +31,26 @@ class TableViewCell: UITableViewCell {
         name.text = vm.username
         idLabel.text = vm.id
         
-        checkProgress()
+        downloadImage()
     }
     
-    private func checkProgress() {
-        viewModel?.getProgress()
+    private func downloadImage() {
+        viewModel?.downloadImage()
             .observe(on: MainScheduler())
-            .subscribe(onNext: { [weak self] imageObservable in
-                if let image = imageObservable?.image {
-                    self?.avatarImage.image = image
-                    self?.progressLabel.isHidden = true
-                } else {
-                    imageObservable?.progress
-                        .observe(on: MainScheduler())
-                        .subscribe(onNext: { progress in                            
-                            self?.progressLabel.text = String(progress ?? 0)
-                        }).disposed(by: self!.bag)
-                }
-            }).disposed(by: bag)
+            .subscribe(onNext: { [weak self] image in
+                self?.progressLabel.isHidden = true
+                self?.avatarImage.image = image
+            })
+            .disposed(by: bag)
+        
+        
+        viewModel?.imageDownloadProgress
+            .observe(on: MainScheduler())
+            .subscribe(onNext: { [weak self] progress in
+                self?.progressLabel.text = String(describing: progress)
+            })
+            .disposed(by: bag)
+            
     }
     
 }
