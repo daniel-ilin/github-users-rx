@@ -6,45 +6,51 @@
 //
 
 import Foundation
-import UIKit
+import UIKit.UIImage
 import RxSwift
 
+class ImageCache {
+    static let shared = Cache<URL, UIImage>()
+}
 
 class ImageLoader {
     
-    static var shared = ImageLoader()
+    private(set) var progress = PublishSubject<Double>()
     
-    let cache = Cache<URL, UIImage>()
+    // cache should be shared accross all the instances
+    private let cache = ImageCache.shared
+    private var observation: NSKeyValueObservation?
     
-    func getDownloadProgress(from url: URL) -> Observable<ImageDownloadObservable?> {
+    deinit {
+        observation?.invalidate()
+    }
         
-        let key = url
-        
+    func getImage(from url: URL) -> Observable<UIImage>  {
         return Observable.create { [weak self] observer in
             
-            let datatask = URLSession.shared.dataTask(with: url) {[weak self] data, response, error in
-                
+            if let cachedImage = self?.cache.value(forKey: url) {
+                observer.onNext(cachedImage)
+                observer.onCompleted()
+                return Disposables.create()
+            }
+            
+            let datatask = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
                 guard let data = data, let image = UIImage(data: data) else {
                     observer.onError(NetworkError.badRequest)
                     return
                 }
                 
-                self?.cache.insert(image, forKey: key)
-                print("DEBUG: Downloading")
-                observer.onNext(ImageDownloadObservable(image: image, progress: Observable.of(1)))
+                self?.cache.insert(image, forKey: url)
+                
+                observer.onNext(image)
                 observer.onCompleted()
             }
             
-            let progressObservable = datatask.progress.rx.observeWeakly(Double.self, "fractionCompleted")
-            observer.onNext(ImageDownloadObservable(image: nil, progress: progressObservable))
-            
-            if let image = self?.cache.value(forKey: key) {
-                print("DEBUG: From cache")
-                observer.onNext(ImageDownloadObservable(image: image, progress: Observable.of(1)))
-                observer.onCompleted()
-            } else {
-                datatask.resume()
+            self?.observation = datatask.progress.observe(\.fractionCompleted) { progress, _ in
+                self?.progress.onNext(progress.fractionCompleted)
             }
+            
+            datatask.resume()
             
             return Disposables.create {
                 datatask.cancel()
@@ -52,10 +58,4 @@ class ImageLoader {
         }
     }
     
-}
-
-
-struct ImageDownloadObservable {
-    var image: UIImage?
-    var progress: Observable<Double?>
 }

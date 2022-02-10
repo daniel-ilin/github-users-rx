@@ -11,19 +11,21 @@ import UIKit
 
 class CellViewModel {
     
+    private let imageLoader = ImageLoader()
+    private(set) lazy var imageDownloadProgress = imageLoader.progress
+    
     private(set) var username: String
     private(set) var id: String
-    private(set) var imageUrl: URL
-    
+    private var imageUrl: URL
     
     init(forUser user: User) {
         self.username = user.login
         self.id = String(user.id)
         self.imageUrl = URL(string: user.avatarURL)!
-    }        
-    
-    func getProgress() -> Observable<ImageDownloadObservable?> {
-        return ImageLoader.shared.getDownloadProgress(from: imageUrl)
     }
     
+    func downloadImage() -> Observable<UIImage> {
+        return imageLoader.getImage(from: imageUrl)
+    }
+
 }
