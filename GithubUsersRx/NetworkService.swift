@@ -27,7 +27,7 @@ class NetworkService {
             URLQueryItem(name: "since", value: since),
             URLQueryItem(name: "per_page", value: "50")
         ]
-        print("DEBUG: Fetching 50 users")
+        
         guard let url = components.url else {
             return fetch(type: Users.self, url: URL(string: "https://api.github.com/users")!)
         }

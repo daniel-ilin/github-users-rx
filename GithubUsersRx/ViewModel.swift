@@ -28,10 +28,10 @@ class ViewModel {
     }
     
     private func loadMoreUsers() {
-        let since = try! cells.value()[cells.value().count-1].id
+        let since = try! cells.value().last?.id
                 
         nowFetchingUsers = true
-        NetworkService.shared.fetchUsers(since: String(since))
+        NetworkService.shared.fetchUsers(since: since)
             .map { $0.map { CellViewModel(forUser: $0)} }
             .subscribe { [weak self] vms in
                 try? self?.cells.onNext((self?.cells.value())! + vms)
