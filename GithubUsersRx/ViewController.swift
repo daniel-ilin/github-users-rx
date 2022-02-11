@@ -18,27 +18,31 @@ class TableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        configureTableView()
-    }
-
-    
-    private func configureTableView() {
-        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Refresh", style: .plain, target: self, action: #selector(refreshTable))
+        bindTableView()
+        viewModel.loadUsers()
     }
     
-    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-            return 110
-        }
     
-    @objc func refreshTable() {
+    private func bindTableView() {
         tableView.dataSource = nil
-        viewModel.getCell()
+        
+        viewModel.cells
             .bind(to: tableView.rx.items(cellIdentifier: "cell",
                                          cellType: TableViewCell.self)) {
                 index, vm, cell in
                 cell.configureCell(from: vm)
             }.disposed(by: bag)
-    }
 
+        
+        tableView.rx.didScroll.subscribe { [weak self] _ in
+            guard let self = self else { return }
+            self.viewModel.onScroll(forTableView: self.tableView)
+        }.disposed(by: bag)
+    }
+    
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 110
+    }
+    
 }
 

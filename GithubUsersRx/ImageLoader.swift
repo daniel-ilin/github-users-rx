@@ -22,6 +22,7 @@ class ImageLoader {
     private var observation: NSKeyValueObservation?
     
     deinit {
+        print("")
         observation?.invalidate()
     }
         
