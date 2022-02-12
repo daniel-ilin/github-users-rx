@@ -13,42 +13,52 @@ class ViewModel {
     var cells = BehaviorSubject<[CellViewModel]>(value: [])
     
     private var bag = DisposeBag()
-    
     private let endReachOffset: CGFloat = 100
+    private var isFetchingUsers = false
     
-    var nowFetchingUsers = false
-    
-    func onScroll(forTableView tableView: UITableView) {
-        let offset = tableView.contentOffset.y
-        let contentHeight = tableView.contentSize.height
-        let bottomOffset = contentHeight - tableView.frame.size.height - endReachOffset
-        if offset > bottomOffset && !nowFetchingUsers {
+    func onScroll(offset: CGFloat, contentHeight: CGFloat, frameHeight: CGFloat) {
+        let bottomOffset = contentHeight - frameHeight - endReachOffset
+        if offset > bottomOffset && !isFetchingUsers {
             loadMoreUsers()
         }
     }
     
-    private func loadMoreUsers() {
-        let since = try! cells.value().last?.id
-                
-        nowFetchingUsers = true
-        NetworkService.shared.fetchUsers(since: since)
-            .map { $0.map { CellViewModel(forUser: $0)} }
-            .subscribe { [weak self] vms in
-                try? self?.cells.onNext((self?.cells.value())! + vms)
-            } onCompleted: { [weak self] in
-                self?.nowFetchingUsers = false
-            }.disposed(by: bag)
+    func loadUsers() {
+        fetchUsers(since: 0)
     }
     
-    func loadUsers() {
-        nowFetchingUsers = true
-        NetworkService.shared.fetchUsers(since: nil)
+    func loadMoreUsers() {
+        // last.id only works because its plain list of users without any filters,
+        // if you will do a search the ids not going to be the same as since
+        guard let count = try? cells.value().count else {
+            return
+        }
+        
+        fetchUsers(since: count)
+    }
+    
+    private func fetchUsers(since: Int) {
+        if isFetchingUsers {
+            return
+        }
+        
+        // isFetchingUsers is not thread safe
+        // here its changed on the main thread
+        // and in onCompleted closure its on the dataTask thread
+        // This may cause nasty race conditions
+        // NOTE: Try running it with ThreadSanitizer option enabled in XCode
+        isFetchingUsers = true
+        
+        NetworkService.shared.fetchUsers(since: since)
             .map { $0.map { CellViewModel(forUser: $0)} }
-            .subscribe { [weak self] vms in
-                self?.cells.onNext(vms)
-            } onCompleted: { [weak self] in                
-                self?.nowFetchingUsers = false
-            }.disposed(by: bag)
+            .subscribe(onNext: { [weak self] vms in
+                try? self?.cells.onNext((self?.cells.value())! + vms)
+            }, onError: { [weak self] error in
+                self?.isFetchingUsers = false  //You missed onError: what if error happens?
+            }, onCompleted: { [weak self] in
+                self?.isFetchingUsers = false
+            })
+            .disposed(by: bag)
     }
     
 }

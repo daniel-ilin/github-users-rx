@@ -19,11 +19,10 @@ class ImageLoader {
     
     // cache should be shared accross all the instances
     private let cache = ImageCache.shared
-    private var observation: NSKeyValueObservation?
+    private var progressObservation: NSKeyValueObservation?
     
     deinit {
-        print("")
-        observation?.invalidate()
+        progressObservation?.invalidate()
     }
         
     func getImage(from url: URL) -> Observable<UIImage>  {
@@ -47,7 +46,7 @@ class ImageLoader {
                 observer.onCompleted()
             }
             
-            self?.observation = datatask.progress.observe(\.fractionCompleted) { progress, _ in
+            self?.progressObservation = datatask.progress.observe(\.fractionCompleted) { progress, _ in
                 self?.progress.onNext(progress.fractionCompleted)
             }
             

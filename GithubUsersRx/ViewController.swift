@@ -27,16 +27,19 @@ class TableViewController: UITableViewController {
         tableView.dataSource = nil
         
         viewModel.cells
-            .bind(to: tableView.rx.items(cellIdentifier: "cell",
-                                         cellType: TableViewCell.self)) {
-                index, vm, cell in
+            .bind(to: tableView.rx.items(cellIdentifier: "cell", cellType: TableViewCell.self)) { index, vm, cell in
                 cell.configureCell(from: vm)
             }.disposed(by: bag)
 
         
-        tableView.rx.didScroll.subscribe { [weak self] _ in
-            guard let self = self else { return }
-            self.viewModel.onScroll(forTableView: self.tableView)
+        // - "unowned self" should be fine here since no scroll event should be called if the tableview dissapears
+        // - don't pass UI objects to viewModel, it shouldn't work with UI directly (its not its responsability)
+        tableView.rx.didScroll.subscribe { [unowned self] _ in
+            self.viewModel.onScroll(
+                offset: self.tableView.contentOffset.y,
+                contentHeight: self.tableView.contentSize.height,
+                frameHeight: self.tableView.frame.size.height
+            )
         }.disposed(by: bag)
     }
     
