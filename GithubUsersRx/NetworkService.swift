@@ -16,20 +16,18 @@ class NetworkService {
     
     static var shared = NetworkService()
     
-    func fetchUsers(since: String?)->Observable<Users> {
-        let since = since ?? "0"
-        
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = "api.github.com"
-        components.path = "/users"
+    private let usersURL = URL(string: "https://api.github.com/users")!
+    
+    // Expose controls and put default values rather then optional, makes the code more readable and usable
+    func fetchUsers(since: Int = 0, perPage: Int = 50) -> Observable<Users> {
+        var components = URLComponents(url: usersURL, resolvingAgainstBaseURL: false)!
         components.queryItems = [
-            URLQueryItem(name: "since", value: since),
-            URLQueryItem(name: "per_page", value: "50")
+            URLQueryItem(name: "since", value: String(since)),
+            URLQueryItem(name: "per_page", value: String(perPage))
         ]
         
         guard let url = components.url else {
-            return fetch(type: Users.self, url: URL(string: "https://api.github.com/users")!)
+            return fetch(type: Users.self, url: usersURL)
         }
         return fetch(type: Users.self, url: url)
     }
