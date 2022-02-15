@@ -9,7 +9,9 @@ import RxSwift
 import RxCocoa
 import UIKit
 
-class TableViewController: UITableViewController {
+class TableViewController: UITableViewController, Storyboarded {
+    
+    weak var coordinator: MainCoordinator?
     
     private var viewModel = ViewModel()
     
@@ -19,9 +21,15 @@ class TableViewController: UITableViewController {
         super.viewDidLoad()
         
         bindTableView()
+        setupUI()
         viewModel.loadUsers()
     }
     
+    
+    private func setupUI() {
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Collection", style: .done, target: self, action: #selector(showCollection))
+        
+    }
     
     private func bindTableView() {
         tableView.dataSource = nil
@@ -38,6 +46,11 @@ class TableViewController: UITableViewController {
             guard let self = self else { return }
             self.viewModel.onScroll(forTableView: self.tableView)
         }.disposed(by: bag)
+    }
+    
+    @objc func showCollection() {
+        print("DEBUG: Calling showCollectionView")
+        coordinator?.showCollectionView()
     }
     
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
